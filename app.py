@@ -28,13 +28,14 @@ frais_reels_trim = max(frais_theoriques_trim, 70.0)
 if deja_present and frais_reels_trim > 120.0:
     frais_reels_trim = 120.0
 
-# 3. Affichage visuel
-st.divider()
-col1, col2 = st.columns(2)
-col1.metric("Frais par trimestre", f"{frais_reels_trim:.2f} €")
-col2.metric("Total annuel", f"{frais_reels_trim * 4:.2f} €")
-
-if frais_reels_trim == 120.0:
-    st.info("ℹ️ Le plafond de fidélité (120€/trim) a été appliqué.")
-elif frais_reels_trim == 70.0:
-    st.warning("ℹ️ Le plancher minimal (70€/trim) a été appliqué.")
+# Remplacez la partie affichage par celle-ci :
+if st.button("Calculer les frais"):
+    st.divider()
+    st.write("### 📊 Résultats de la simulation")
+    res1, res2, res3 = st.columns(3)
+    res1.metric("Taux appliqué", f"{taux}%")
+    res2.metric("Frais / Trimestre", f"{frais_reels_trim:.2f} €")
+    res3.metric("Frais / An", f"{frais_reels_trim * 4:.2f} €")
+    
+    if info_message:
+        st.info(info_message)
