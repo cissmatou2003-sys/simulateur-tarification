@@ -37,5 +37,4 @@ if st.button("Calculer les frais"):
     res2.metric("Frais / Trimestre", f"{frais_reels_trim:.2f} €")
     res3.metric("Frais / An", f"{frais_reels_trim * 4:.2f} €")
     
-    if info_message:
-        st.info(info_message)
+    
