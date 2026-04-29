@@ -2,6 +2,32 @@ import streamlit as st
 import pandas as pd
 
 st.set_page_config(page_title="Simulateur GC", layout="wide")
+st.markdown("""
+    <style>
+        /* Changer la couleur de fond de la barre latérale */
+        [data-testid="stSidebar"] {
+            background-color: #007D8F;
+        }
+        
+        /* Changer la couleur du texte dans la barre latérale pour qu'il soit blanc */
+        [data-testid="stSidebar"] .stText, [data-testid="stSidebar"] label, [data-testid="stSidebar"] h2 {
+            color: white !important;
+        }
+
+        /* Personnaliser les boutons */
+        div.stButton > button:first-child {
+            background-color: #007D8F;
+            color: white;
+            border-radius: 5px;
+            border: none;
+        }
+        
+        /* Couleur des titres principaux */
+        h1, h2, h3 {
+            color: #007D8F;
+        }
+    </style>
+""", unsafe_allow_html=True)
 st.title("🧮 Simulateur tarification Gestion conseillée")
 
 # --- INITIALISATION ---
