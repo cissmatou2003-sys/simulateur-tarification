@@ -1,3 +1,5 @@
+import os
+st.write(f"Le dossier de mon script est : {os.getcwd()}")
 import streamlit as st
 import pandas as pd
 
