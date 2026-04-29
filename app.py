@@ -23,7 +23,7 @@ st.markdown("""
 # --- BARRE LATÉRALE ---
 with st.sidebar:
     # Logo Crédit Agricole (via URL pour test immédiat)
-    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Cr%C3%A9dit_agricole.svg/1024px-Cr%C3%A9dit_agricole.svg.png", width=150)
+    st.image("https://share.google/B4pysDu12kKyyL9Qt", width=150)
     
     st.header("👤 Paramètres Client")
     deja_present = st.checkbox("Client GC avant juillet 2026 ou détenteur d'une convention Privilège")
