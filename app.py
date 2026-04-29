@@ -21,7 +21,7 @@ with st.sidebar:
     if st.button("Ajouter au panier", use_container_width=True):
         if mnt_p > 0:
             st.session_state.panier_produits.append({"type": type_p, "montant": mnt_p})
-            st.rerun() # On force le rafraîchissement pour voir le produit
+            st.rerun()
         else:
             st.warning("Le montant doit être supérieur à 0.")
 
@@ -29,37 +29,30 @@ with st.sidebar:
         st.session_state.panier_produits = []
         st.rerun()
 
-# --- ZONE D'AFFICHAGE ET SUPPRESSION ---
-col_table, col_res = st.columns([2, 1])
+# --- AFFICHAGE ET GESTION DU PANIER ---
+col_table, col_res = st.columns([1.8, 1.2])
 
 with col_table:
-    st.write("### 📝 Détail des avoirs du client")
+    st.write("### 📝 Détail des avoirs")
     if not st.session_state.panier_produits:
         st.info("Le panier est vide.")
     else:
-        # On transforme le panier en DataFrame
-        df_actuel = pd.DataFrame(st.session_state.panier_produits)
-        
-        st.write("💡 *Vous pouvez modifier les montants ou supprimer une ligne en la sélectionnant et en appuyant sur la touche 'Suppr' de votre clavier.*")
-        
-        # UTILISATION DU DATA_EDITOR POUR LA SUPPRESSION
-        # num_rows="dynamic" permet d'ajouter/supprimer des lignes
-        df_modifie = st.data_editor(
-            df_actuel, 
-            use_container_width=True, 
-            num_rows="dynamic",
-            column_config={
-                "montant": st.column_config.NumberColumn("Montant (€)", format="%d €"),
-                "type": st.column_config.SelectboxColumn("Type", options=["Assurance Vie", "CTO/PEA OPC", "CTO/PEA Titres vifs"])
-            }
-        )
-        
-        # MISE À JOUR DU SESSION STATE SI MODIFICATION
-        if not df_modifie.equals(df_actuel):
-            st.session_state.panier_produits = df_modifie.to_dict('records')
-            st.rerun()
+        # On crée une ligne pour chaque produit avec un bouton de suppression
+        for i, item in enumerate(st.session_state.panier_produits):
+            c1, c2, c3 = st.columns([2, 2, 0.5])
+            with c1:
+                st.write(f"**{item['type']}**")
+            with c2:
+                # Modification simplifiée : un champ numérique par ligne
+                new_mnt = st.number_input(f"Montant (€)", value=float(item['montant']), key=f"mnt_{i}", label_visibility="collapsed")
+                st.session_state.panier_produits[i]['montant'] = new_mnt
+            with c3:
+                if st.button("🗑️", key=f"del_{i}"):
+                    st.session_state.panier_produits.pop(i)
+                    st.rerun()
+            st.divider()
 
-# --- LOGIQUE DE CALCUL (inchangée mais basée sur le panier potentiellement modifié) ---
+# --- LOGIQUE DE CALCUL ---
 total_soumis_limites_trim = 0
 total_titres_vifs_trim = 0
 
@@ -76,27 +69,28 @@ for p in st.session_state.panier_produits:
     else: # Titres vifs
         total_titres_vifs_trim += (montant * (0.75 / 100)) / 4
 
-# --- APPLICATION DES RÈGLES ---
-if st.session_state.panier_produits:
-    frais_av_opc_trim = total_soumis_limites_trim
-    applied_plancher = False
-    applied_plafond = False
+# --- RÉSULTATS ---
+with col_res:
+    st.write("### 📊 Calcul des frais")
+    if st.session_state.panier_produits:
+        frais_av_opc_trim = total_soumis_limites_trim
+        applied_plancher = False
+        applied_plafond = False
 
-    if frais_av_opc_trim > 0:
-        if frais_av_opc_trim < 70.0:
-            frais_av_opc_trim = 70.0
-            applied_plancher = True
-        if deja_present and frais_av_opc_trim > 120.0:
-            frais_av_opc_trim = 120.0
-            applied_plafond = True
+        if frais_av_opc_trim > 0:
+            if frais_av_opc_trim < 70.0:
+                frais_av_opc_trim = 70.0
+                applied_plancher = True
+            if deja_present and frais_av_opc_trim > 120.0:
+                frais_av_opc_trim = 120.0
+                applied_plafond = True
 
-    total_final_trim = frais_av_opc_trim + total_titres_vifs_trim
+        total_final_trim = frais_av_opc_trim + total_titres_vifs_trim
 
-    with col_res:
-        st.write("### 📊 Total Client")
         st.metric("Total Trimestriel", f"{total_final_trim:.2f} €")
         st.metric("Total Annuel", f"{total_final_trim * 4:.2f} €")
-        st.divider()
+        
         if applied_plancher: st.warning("⚠️ Plancher de 70€ appliqué.")
         if applied_plafond: st.success("✅ Plafond Privilège appliqué.")
-        if total_titres_vifs_trim > 0: st.info(f"ℹ️ Titres vifs : {total_titres_vifs_trim:.2f}€")
+    else:
+        st.write("Ajoutez des produits pour voir le calcul.")
