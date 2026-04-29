@@ -1,17 +1,31 @@
 import streamlit as st
 import pandas as pd
 
+# --- CONFIGURATION PAGE ---
 st.set_page_config(page_title="Simulateur GC", layout="wide")
-st.title("🧮 Simulateur tarification Gestion conseillée")
 
-# --- INITIALISATION ---
-if 'panier_produits' not in st.session_state:
-    st.session_state.panier_produits = []
+# --- AJOUT DU LOGO ET STYLE CSS ---
+# On utilise du CSS pour placer le logo proprement et colorer les titres en bleu CA
+st.markdown("""
+    <style>
+        .main-title {
+            color: #007D8F;
+            font-weight: bold;
+            margin-bottom: 0px;
+        }
+        /* Style pour les metrics pour rappeler la banque */
+        [data-testid="stMetricValue"] {
+            color: #007D8F;
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-# --- BARRE LATÉRALE : SAISIE ---
+# --- BARRE LATÉRALE ---
 with st.sidebar:
+    # Logo Crédit Agricole (via URL pour test immédiat)
+    st.image("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Cr%C3%A9dit_agricole.svg/1024px-Cr%C3%A9dit_agricole.svg.png", width=150)
+    
     st.header("👤 Paramètres Client")
-    # Nouveau libellé demandé
     deja_present = st.checkbox("Client GC avant juillet 2026 ou détenteur d'une convention Privilège")
     
     st.divider()
@@ -30,25 +44,33 @@ with st.sidebar:
         st.session_state.panier_produits = []
         st.rerun()
 
-# --- AFFICHAGE DU RÉCAPITULATIF ---
+# --- CORPS DU SIMULATEUR ---
+st.markdown('<h1 class="main-title">🧮 Simulateur tarification Gestion conseillée</h1>', unsafe_allow_html=True)
+st.write("---")
+
+if 'panier_produits' not in st.session_state:
+    st.session_state.panier_produits = []
+
 col_table, col_res = st.columns([2, 1])
 
 with col_table:
     st.write("### 📝 Détail des avoirs du client")
     if not st.session_state.panier_produits:
-        st.info("Aucun produit ajouté pour le moment.")
+        st.info("Utilisez le menu à gauche pour ajouter des actifs.")
     else:
         df = pd.DataFrame(st.session_state.panier_produits)
-        st.table(df)
+        # Formatage pour l'affichage
+        df_display = df.copy()
+        df_display['montant'] = df_display['montant'].apply(lambda x: f"{x:,.2f} €")
+        st.table(df_display)
 
 # --- LOGIQUE DE CALCUL ---
-total_soumis_limites_trim = 0  # Pour AV et OPC
-total_titres_vifs_trim = 0     # Pour Titres vifs (Hors forfait)
+total_soumis_limites_trim = 0  
+total_titres_vifs_trim = 0     
 
 for p in st.session_state.panier_produits:
     montant = p['montant']
     produit = p['type']
-    taux = 0
     
     if produit == "Assurance Vie":
         if montant < 80000: taux = 0.25
@@ -62,42 +84,36 @@ for p in st.session_state.panier_produits:
         else: taux = 0.25
         total_soumis_limites_trim += (montant * (taux / 100)) / 4
         
-    else: # CTO/PEA Titres vifs
+    else: # Titres vifs
         taux = 0.75
         total_titres_vifs_trim += (montant * (taux / 100)) / 4
 
-# --- APPLICATION DES RÈGLES SPÉCIFIQUES ---
+# --- AFFICHAGE DES RÉSULTATS ---
 if st.session_state.panier_produits:
-    # 1. Traitement de la part AV / OPC (avec Plancher/Plafond)
     frais_av_opc_trim = total_soumis_limites_trim
     applied_plancher = False
     applied_plafond = False
 
     if frais_av_opc_trim > 0:
-        # Application du plancher de 70€
         if frais_av_opc_trim < 70.0:
             frais_av_opc_trim = 70.0
             applied_plancher = True
         
-        # Application du plafond de 120€ (si éligible)
         if deja_present and frais_av_opc_trim > 120.0:
             frais_av_opc_trim = 120.0
             applied_plafond = True
 
-    # 2. Somme finale
     total_final_trim = frais_av_opc_trim + total_titres_vifs_trim
 
     with col_res:
-        st.write("### 📊 Total Client")
+        st.write("### 📊 Résultat de la simulation")
         st.metric("Total Trimestriel", f"{total_final_trim:.2f} €")
         st.metric("Total Annuel", f"{total_final_trim * 4:.2f} €")
         
         st.divider()
-        # Indicateurs de transparence
         if applied_plancher:
-            st.warning("⚠️ Plancher de 70€ appliqué sur AV/OPC.")
+            st.warning("⚠️ Plancher (70€) appliqué sur AV/OPC.")
         if applied_plafond:
-            st.success("✅ Plafond Privilège (120€) appliqué sur AV/OPC.")
+            st.success("✅ Plafond Privilège (120€) appliqué.")
         if total_titres_vifs_trim > 0:
-            st.info(f"ℹ️ Titres vifs : {total_titres_vifs_trim:.2f}€ (Facturés hors forfait)")
-    
+            st.info(f"ℹ️ Dont {total_titres_vifs_trim:.2f}€ de Titres vifs hors forfait.")
