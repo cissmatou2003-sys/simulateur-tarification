@@ -30,20 +30,18 @@ with st.sidebar:
         st.rerun()
 
 # --- AFFICHAGE ET GESTION DU PANIER ---
-col_table, col_res = st.columns([1.8, 1.2])
+col_table, col_res = st.columns([1.6, 1.4])
 
 with col_table:
     st.write("### 📝 Détail des avoirs")
     if not st.session_state.panier_produits:
-        st.info("Le panier est vide.")
+        st.info("Le panier est vide. Utilisez la barre latérale pour ajouter des contrats.")
     else:
-        # On crée une ligne pour chaque produit avec un bouton de suppression
         for i, item in enumerate(st.session_state.panier_produits):
             c1, c2, c3 = st.columns([2, 2, 0.5])
             with c1:
                 st.write(f"**{item['type']}**")
             with c2:
-                # Modification simplifiée : un champ numérique par ligne
                 new_mnt = st.number_input(f"Montant (€)", value=float(item['montant']), key=f"mnt_{i}", label_visibility="collapsed")
                 st.session_state.panier_produits[i]['montant'] = new_mnt
             with c3:
@@ -72,25 +70,39 @@ for p in st.session_state.panier_produits:
 # --- RÉSULTATS ---
 with col_res:
     st.write("### 📊 Calcul des frais")
+    
+    # Intégration de ton image de synthèse
+    with st.expander("🔍 Voir le barème officiel et périmètre", expanded=True):
+        st.image("tarification_GC_synthese.jpg", use_container_width=True)
+
     if st.session_state.panier_produits:
         frais_av_opc_trim = total_soumis_limites_trim
         applied_plancher = False
         applied_plafond = False
 
-        if frais_av_opc_trim > 0:
-            if frais_av_opc_trim < 70.0:
-                frais_av_opc_trim = 70.0
-                applied_plancher = True
-            if deja_present and frais_av_opc_trim > 120.0:
-                frais_av_opc_trim = 120.0
-                applied_plafond = True
+        # Application du plancher de 70€ (uniquement sur AV/OPC)
+        if frais_av_opc_trim > 0 and frais_av_opc_trim < 70.0:
+            frais_av_opc_trim = 70.0
+            applied_plancher = True
+        
+        # Application du plafond Privilège (uniquement sur AV/OPC)
+        if deja_present and frais_av_opc_trim > 120.0:
+            frais_av_opc_trim = 120.0
+            applied_plafond = True
 
         total_final_trim = frais_av_opc_trim + total_titres_vifs_trim
 
+        # Affichage des résultats
         st.metric("Total Trimestriel", f"{total_final_trim:.2f} €")
-        st.metric("Total Annuel", f"{total_final_trim * 4:.2f} €")
+        st.metric("Total Annuel (estimé)", f"{total_final_trim * 4:.2f} €")
         
-        if applied_plancher: st.warning("⚠️ Plancher de 70€ appliqué.")
-        if applied_plafond: st.success("✅ Plafond Privilège appliqué.")
+        if applied_plancher: 
+            st.warning("⚠️ **Plancher de 70€ appliqué** sur le bloc Assurance Vie / OPC.")
+        if applied_plafond: 
+            st.success("✅ **Plafond Privilège (120€) appliqué** sur le bloc Assurance Vie / OPC.")
+        
+        if total_titres_vifs_trim > 0:
+            st.info(f"Dont {total_titres_vifs_trim:.2f} € de frais sur Titres Vifs (hors limites).")
     else:
-        st.write("Ajoutez des produits pour voir le calcul.")
+        st.write("Ajoutez des produits pour voir le calcul détaillé.")
+
