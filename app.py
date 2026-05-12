@@ -43,7 +43,6 @@ with col_table:
             with c1:
                 st.write(f"**{item['type']}**")
             with c2:
-                # Permet de modifier le montant directement dans la liste
                 new_mnt = st.number_input(f"Montant (€)", value=float(item['montant']), key=f"mnt_{i}", label_visibility="collapsed")
                 st.session_state.panier_produits[i]['montant'] = new_mnt
             with c3:
@@ -53,58 +52,60 @@ with col_table:
             st.divider()
 
 # --- LOGIQUE DE CALCUL ---
-total_soumis_limites_trim = 0  # Assiette pour Plancher/Plafond (AV et OPC)
-total_titres_vifs_trim = 0     # Hors limites
+total_soumis_limites_trim = 0  
+total_titres_vifs_trim = 0     
 
 for p in st.session_state.panier_produits:
     montant = p['montant']
     produit = p['type']
     
     if produit == "Assurance Vie":
-        # Barème : <80k (0.25%), 80k-200k (0.20%), >200k (0.15%)
         taux = 0.25 if montant < 80000 else (0.20 if montant <= 200000 else 0.15)
         total_soumis_limites_trim += (montant * (taux / 100)) / 4
         
     elif produit == "CTO/PEA OPC":
-        # Barème : <50k (0.60%), 50k-80k (0.50%), >80k (0.25%)
         taux = 0.60 if montant < 50000 else (0.50 if montant <= 80000 else 0.25)
         total_soumis_limites_trim += (montant * (taux / 100)) / 4
         
     else: # Titres vifs
-        # Taux fixe 0.75% sans plancher
         total_titres_vifs_trim += (montant * (0.75 / 100)) / 4
 
 # --- AFFICHAGE DES RÉSULTATS ---
 with col_res:
     st.write("### 📊 Calcul des frais")
-    
-    # Affichage de l'image de synthèse (Corrigé en .png)
-    with st.expander("🔍 Voir le barème et les règles de calcul", expanded=True):
-        try:
-            st.image("tarification_GC_synthese.png", use_container_width=True)
-        except:
-            st.error("Fichier 'tarification_GC_synthese.png' introuvable dans le dépôt GitHub.")
 
     if st.session_state.panier_produits:
         frais_av_opc_trim = total_soumis_limites_trim
         applied_plancher = False
         applied_plafond = False
 
-        # 1. Application du plancher de 70€ (uniquement sur bloc AV/OPC)
         if frais_av_opc_trim > 0 and frais_av_opc_trim < 70.0:
             frais_av_opc_trim = 70.0
             applied_plancher = True
         
-        # 2. Application du plafond Privilège de 120€ (uniquement sur bloc AV/OPC)
         if deja_present and frais_av_opc_trim > 120.0:
             frais_av_opc_trim = 120.0
             applied_plafond = True
 
-        # 3. Total final = Bloc régulé + Titres Vifs (libres)
         total_final_trim = frais_av_opc_trim + total_titres_vifs_trim
 
-        # Affichage des indicateurs
         st.metric("Total Trimestriel", f"{total_final_trim:.2f} €")
         st.metric("Total Annuel", f"{total_final_trim * 4:.2f} €")
         
-        # Messages d'aler
+        if applied_plancher: 
+            st.warning("⚠️ **Plancher de 70€ appliqué** sur le bloc Assurance Vie / OPC.")
+        if applied_plafond: 
+            st.success("✅ **Plafond Privilège (120€) appliqué** sur le bloc Assurance Vie / OPC.")
+        
+        if total_titres_vifs_trim > 0:
+            st.info(f"Information : {total_titres_vifs_trim:.2f} € de frais Titres Vifs inclus.")
+    else:
+        st.write("Ajoutez des produits pour voir le détail.")
+
+    # --- IMAGE DE SYNTHÈSE PLACÉE EN BAS ---
+    st.divider() # Petite ligne de séparation visuelle
+    with st.expander("🔍 Voir le barème et les règles de calcul", expanded=False):
+        try:
+            st.image("tarification_GC_synthese.png", use_container_width=True)
+        except:
+            st.error("Fichier 'tarification_GC_synthese.png' introuvable.")
