@@ -113,4 +113,10 @@ with col_res:
     else:
         st.write("Ajoutez des produits pour voir le détail.")
 
-    # --- IMAGE DE SYNTH
+    # --- IMAGE DE SYNTHÈSE PLACÉE EN BAS ---
+    st.divider() # Petite ligne de séparation visuelle
+    with st.expander("🔍 Voir le barème et les règles de calcul", expanded=False):
+        try:
+            st.image("tarification_GC_synthese.png", use_container_width=True)
+        except:
+            st.error("Fichier 'tarification_GC_synthese.png' introuvable.")
