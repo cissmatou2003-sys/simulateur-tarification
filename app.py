@@ -55,7 +55,7 @@ with col_table:
 total_soumis_limites_trim = 0  
 total_titres_vifs_trim = 0     
 
-# 1. Cumul des montants globaux par catégorie de produit
+# 1. On commence par cumuler les montants globaux par type de produit
 cumul_assurance_vie = 0
 cumul_opc = 0
 
@@ -64,4 +64,53 @@ for p in st.session_state.panier_produits:
     produit = p['type']
     
     if produit == "Assurance Vie":
-        cumul_
+        cumul_assurance_vie += montant
+    elif produit == "CTO/PEA OPC":
+        cumul_opc += montant
+    else: # Titres vifs
+        total_titres_vifs_trim += (montant * (0.75 / 100)) / 4
+
+# 2. On applique le barème sur les montants cumulés globaux
+# Calcul pour l'Assurance Vie globale
+if cumul_assurance_vie > 0:
+    taux_av = 0.25 if cumul_assurance_vie < 80000 else (0.20 if cumul_assurance_vie <= 200000 else 0.15)
+    total_soumis_limites_trim += (cumul_assurance_vie * (taux_av / 100)) / 4
+
+# Calcul pour les OPC globaux
+if cumul_opc > 0:
+    taux_opc = 0.60 if cumul_opc < 50000 else (0.50 if cumul_opc <= 80000 else 0.25)
+    total_soumis_limites_trim += (cumul_opc * (taux_opc / 100)) / 4
+
+# --- AFFICHAGE DES RÉSULTATS ---
+with col_res:
+    st.write("### 📊 Calcul des frais")
+
+    if st.session_state.panier_produits:
+        frais_av_opc_trim = total_soumis_limites_trim
+        applied_plancher = False
+        applied_plafond = False
+
+        if frais_av_opc_trim > 0 and frais_av_opc_trim < 70.0:
+            frais_av_opc_trim = 70.0
+            applied_plancher = True
+        
+        if deja_present and frais_av_opc_trim > 120.0:
+            frais_av_opc_trim = 120.0
+            applied_plafond = True
+
+        total_final_trim = frais_av_opc_trim + total_titres_vifs_trim
+
+        st.metric("Total Trimestriel", f"{total_final_trim:.2f} €")
+        st.metric("Total Annuel", f"{total_final_trim * 4:.2f} €")
+        
+        if applied_plancher: 
+            st.warning("⚠️ **Plancher de 70€ appliqué** sur le bloc Assurance Vie / OPC.")
+        if applied_plafond: 
+            st.success("✅ **Plafond Privilège (120€) appliqué** sur le bloc Assurance Vie / OPC.")
+        
+        if total_titres_vifs_trim > 0:
+            st.info(f"Information : {total_titres_vifs_trim:.2f} € de frais Titres Vifs inclus.")
+    else:
+        st.write("Ajoutez des produits pour voir le détail.")
+
+    # --- IMAGE DE SYNTH
