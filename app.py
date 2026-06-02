@@ -29,7 +29,6 @@ with st.sidebar:
     if st.button("Tout réinitialiser", type="secondary", use_container_width=True):
         st.session_state.panier_produits = []
         st.rerun()
-
 # --- AFFICHAGE DU PANIER ---
 col_table, col_res = st.columns([1.6, 1.4])
 
@@ -38,19 +37,29 @@ with col_table:
     if not st.session_state.panier_produits:
         st.info("Le panier est vide. Utilisez la barre latérale pour ajouter des contrats.")
     else:
-        for i, item in enumerate(st.session_state.panier_produits):
+        # On crée une copie de la liste pour éviter les conflits d'index pendant l'itération
+        for i, item in enumerate(list(st.session_state.panier_produits)):
             c1, c2, c3 = st.columns([2, 2, 0.5])
             with c1:
                 st.write(f"**{item['type']}**")
             with c2:
-                new_mnt = st.number_input(f"Montant (€)", value=float(item['montant']), key=f"mnt_{i}", label_visibility="collapsed")
-                st.session_state.panier_produits[i]['montant'] = new_mnt
+                # On affiche l'input de saisie du montant
+                new_mnt = st.number_input(
+                    f"Montant (€)", 
+                    value=float(item['montant']), 
+                    key=f"mnt_{i}", 
+                    label_visibility="collapsed"
+                )
+                # MODIFICATION : On ne met à jour le montant QUE s'il a réellement changé
+                if new_mnt != item['montant']:
+                    st.session_state.panier_produits[i]['montant'] = new_mnt
+                    st.rerun()
             with c3:
+                # Utilisation d'une clé unique basée sur l'index actuel
                 if st.button("🗑️", key=f"del_{i}"):
                     st.session_state.panier_produits.pop(i)
                     st.rerun()
             st.divider()
-
 # --- LOGIQUE DE CALCUL ---
 total_soumis_limites_trim = 0  
 total_titres_vifs_trim = 0     
